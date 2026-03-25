@@ -1,0 +1,5 @@
+{
+  "name": "Nan Province Performance Tracker",
+  "description": "A performance tracking dashboard for Nan province, monitoring reporting status for JPTH and 5+1 issues across 15 districts.",
+  "requestFramePermissions": []
+}
