@@ -87,6 +87,21 @@ const App: React.FC = () => {
             <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mb-4"></div>
             <p className="text-lg animate-pulse">กำลังดึงข้อมูลจาก Google Sheets...</p>
           </div>
+        ) : data.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-[60vh] text-white text-center px-4">
+            <div className="bg-white/20 p-6 rounded-2xl backdrop-blur-md border border-white/30 max-w-md">
+              <h3 className="text-xl font-bold mb-2">ไม่พบข้อมูลการรายงาน</h3>
+              <p className="text-white/80 mb-6">
+                อาจเกิดจากยังไม่มีการบันทึกข้อมูลใน Google Sheets หรือไฟล์ยังไม่ได้ตั้งค่า "เผยแพร่ไปยังเว็บ"
+              </p>
+              <button 
+                onClick={() => loadData(true)}
+                className="bg-white text-purple-600 px-6 py-2 rounded-full font-bold hover:bg-purple-50 transition-colors"
+              >
+                ลองใหม่อีกครั้ง
+              </button>
+            </div>
+          </div>
         ) : (
           <>
             {activePage === 'dashboard' && (

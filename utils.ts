@@ -115,24 +115,43 @@ export const getDistrictSummary = (record: ReportRecord): DistrictSummary => {
 
 async function fetchCSV(sheetId: string): Promise<string[][]> {
   const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&cache_bust=${Date.now()}`;
-  const corsUrl = `${CORS_PROXY}${encodeURIComponent(url)}`;
   
-  try {
-    const response = await fetch(corsUrl, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const text = await response.text();
-    return parseCSV(text);
-  } catch (error) {
+  // Try multiple proxies in order of reliability
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
+  ];
+
+  for (const proxyUrl of proxies) {
     try {
-        const fallbackUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-        const response = await fetch(fallbackUrl);
-        const text = await response.text();
-        return parseCSV(text);
-    } catch (e) {
-        console.error("CSV fetch failed for", sheetId);
-        return [];
+      console.log(`Attempting to fetch from: ${proxyUrl}`);
+      const response = await fetch(proxyUrl, { 
+        method: 'GET',
+        headers: { 'Accept': 'text/csv' }
+      });
+      
+      if (!response.ok) continue;
+      
+      const text = await response.text();
+      
+      // Check if the response is actually HTML (usually happens when sheet is not public)
+      if (text.trim().startsWith('<!DOCTYPE') || text.includes('<html')) {
+        console.error("Received HTML instead of CSV. Is the Google Sheet 'Published to the web'?");
+        continue;
+      }
+
+      if (text.length < 10) continue; // Too short to be valid data
+
+      const data = parseCSV(text);
+      if (data.length > 1) return data;
+    } catch (error) {
+      console.warn(`Proxy failed: ${proxyUrl}`, error);
     }
   }
+
+  console.error(`All proxies failed for sheet: ${sheetId}`);
+  return [];
 }
 
 function parseCSV(text: string): string[][] {
