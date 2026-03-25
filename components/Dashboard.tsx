@@ -125,7 +125,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="bg-white rounded-2xl p-6 shadow-xl hover:-translate-y-1 transition-transform duration-300 border-l-4 border-cyan-500">
           <div className="flex justify-between items-start mb-4">
             <div>
-              <p className="text-slate-500 text-sm font-medium">รายงานประเด็น 5+1</p>
+              <p className="text-slate-500 text-sm font-medium">การขับเคลื่อน CDD AI</p>
               <h3 className="text-3xl font-bold text-cyan-600 mt-1">{issueReportedCount}</h3>
             </div>
             <div className="p-3 bg-cyan-50 rounded-xl text-cyan-500">
@@ -248,7 +248,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 />
                 <Legend wrapperStyle={{paddingTop: '20px'}} />
                 <Bar name="รายงาน จปฐ. (จำนวนครั้ง)" dataKey="JPTH" fill="#667eea" radius={[4, 4, 0, 0]} />
-                <Bar name="รายงาน 5+1 (จำนวนครั้ง)" dataKey="Issue51" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                <Bar name="การขับเคลื่อน CDD AI (จำนวนครั้ง)" dataKey="Issue51" fill="#06b6d4" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

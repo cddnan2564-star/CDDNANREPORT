@@ -265,7 +265,7 @@ export const fetchData = async (forceRefresh = false): Promise<ReportRecord[]> =
   ]);
 
   const jpthEntries = processSheetData(jpthRaw, 'JPTH');
-  const issueEntries = processSheetData(issueRaw, 'Issue 5+1');
+  const issueEntries = processSheetData(issueRaw, 'CDD AI');
   
   // 2. Pre-index entries for faster lookup O(N)
   const createEntryMap = (entries: SheetEntry[]) => {

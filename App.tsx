@@ -60,7 +60,7 @@ const App: React.FC = () => {
               <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#667eea] to-[#764ba2]">
                 ระบบติดตามผลการดำเนินงาน
               </h1>
-              <p className="text-sm text-slate-500">จปฐ. ปี 2569 และประเด็น 5+1 จังหวัดน่าน</p>
+              <p className="text-sm text-slate-500">การบริหารการจัดเก็บ จปฐ. ปี 2569 และ การขับเคลื่อน CDD AI</p>
             </div>
             
             <div className="flex flex-wrap justify-center gap-2">
