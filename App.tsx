@@ -88,18 +88,90 @@ const App: React.FC = () => {
             <p className="text-lg animate-pulse">กำลังดึงข้อมูลจาก Google Sheets...</p>
           </div>
         ) : data.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-[60vh] text-white text-center px-4">
-            <div className="bg-white/20 p-6 rounded-2xl backdrop-blur-md border border-white/30 max-w-md">
-              <h3 className="text-xl font-bold mb-2">ไม่พบข้อมูลการรายงาน</h3>
-              <p className="text-white/80 mb-6">
-                อาจเกิดจากยังไม่มีการบันทึกข้อมูลใน Google Sheets หรือไฟล์ยังไม่ได้ตั้งค่า "เผยแพร่ไปยังเว็บ"
+          <div className="flex flex-col items-center justify-center min-h-[60vh] text-white my-4 px-4 sm:px-6">
+            <div className="bg-white text-slate-800 p-6 sm:p-8 rounded-2xl shadow-2xl border border-white/20 max-w-2xl w-full text-left">
+              <div className="flex items-center gap-3 mb-4 text-amber-500 border-b border-slate-100 pb-3">
+                <span className="text-2xl">⚠️</span>
+                <h3 className="text-2xl font-bold">ไม่พบข้อมูลหรือเชื่อมต่อระบบล้มเหลว</h3>
+              </div>
+              
+              <p className="text-slate-600 text-sm mb-6 leading-relaxed">
+                ระบบพยายามดึงข้อมูลดิบจากสเปรดชีต Google Sheets แล้ว แต่ประมวลผลข้อมูลไม่ได้ โปรดดูรายละเอียดวิเคราะห์ปัญหาแบบเจาะลึกได้ในกล่องวินิจฉัยพอร์ทัลสดด้านล่างนี้:
               </p>
-              <button 
-                onClick={() => loadData(true)}
-                className="bg-white text-purple-600 px-6 py-2 rounded-full font-bold hover:bg-purple-50 transition-colors"
-              >
-                ลองใหม่อีกครั้ง
-              </button>
+
+              <div className="space-y-4 mb-6">
+                {/* JPTH Diagnostics */}
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-slate-700 text-sm">1. ระบบรายงาน จปฐ. ปี 2569</span>
+                    <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
+                      (window as any).sheetDiagnostics?.JPTH?.status === 'success' ? 'bg-emerald-100 text-emerald-800' :
+                      (window as any).sheetDiagnostics?.JPTH?.status === 'not_public_html' ? 'bg-amber-100 text-amber-800' :
+                      (window as any).sheetDiagnostics?.JPTH?.status === 'headers_mismatch' ? 'bg-rose-100 text-rose-800' :
+                      'bg-slate-200 text-slate-800'
+                    }`}>
+                      { (window as any).sheetDiagnostics?.JPTH?.status === 'success' ? 'ดึงข้อมูลสำเร็จ' :
+                        (window as any).sheetDiagnostics?.JPTH?.status === 'not_public_html' ? 'ไฟล์ไม่เป็นสาธารณะ' :
+                        (window as any).sheetDiagnostics?.JPTH?.status === 'headers_mismatch' ? 'หัวตารางแรกสะกดไม่ตรง' :
+                        (window as any).sheetDiagnostics?.JPTH?.status === 'empty_data' ? 'ไม่มีข้อมูลในไฟล์' :
+                        'ขัดข้อง/ไม่มีบริการ'
+                      }
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 font-mono whitespace-pre-wrap bg-white p-2.5 rounded border border-slate-100 max-h-[140px] overflow-y-auto">
+                    {(window as any).sheetDiagnostics?.JPTH?.details || 'ไม่ได้ตรวจสอบหรือกำลังเชื่อมต่อ'}
+                  </p>
+                  {(window as any).sheetDiagnostics?.JPTH?.proxyUsed && (
+                    <p className="text-[10px] text-slate-400 mt-1">แหล่งดึง: {(window as any).sheetDiagnostics.JPTH.proxyUsed}</p>
+                  )}
+                </div>
+
+                {/* CDD AI Diagnostics */}
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-slate-700 text-sm">2. ระบบขับเคลื่อน CDD AI</span>
+                    <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
+                      (window as any).sheetDiagnostics?.CDDAI?.status === 'success' ? 'bg-emerald-100 text-emerald-800' :
+                      (window as any).sheetDiagnostics?.CDDAI?.status === 'not_public_html' ? 'bg-amber-100 text-amber-800' :
+                      (window as any).sheetDiagnostics?.CDDAI?.status === 'headers_mismatch' ? 'bg-rose-100 text-rose-800' :
+                      'bg-slate-200 text-slate-800'
+                    }`}>
+                      { (window as any).sheetDiagnostics?.CDDAI?.status === 'success' ? 'ดึงข้อมูลสำเร็จ' :
+                        (window as any).sheetDiagnostics?.CDDAI?.status === 'not_public_html' ? 'ไฟล์ไม่เป็นสาธารณะ' :
+                        (window as any).sheetDiagnostics?.CDDAI?.status === 'headers_mismatch' ? 'หัวตารางแรกสะกดไม่ตรง' :
+                        (window as any).sheetDiagnostics?.CDDAI?.status === 'empty_data' ? 'ไม่มีข้อมูลในไฟล์' :
+                        'ขัดข้อง/ไม่มีบริการ'
+                      }
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 font-mono whitespace-pre-wrap bg-white p-2.5 rounded border border-slate-100 max-h-[140px] overflow-y-auto">
+                    {(window as any).sheetDiagnostics?.CDDAI?.details || 'ไม่ได้ตรวจสอบหรือกำลังเชื่อมต่อ'}
+                  </p>
+                  {(window as any).sheetDiagnostics?.CDDAI?.proxyUsed && (
+                    <p className="text-[10px] text-slate-400 mt-1">แหล่งดึง: {(window as any).sheetDiagnostics.CDDAI.proxyUsed}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl mb-6 text-xs text-blue-900 space-y-2">
+                <p className="font-bold text-sm text-blue-900">💡 คำถาม: จะตั้งค่าแก้ไขข้อมูลในสเปรดชีตอย่างไรให้ถูกต้อง?</p>
+                <ol className="list-decimal list-inside space-y-1 text-slate-700">
+                  <li>เปิดไฟล์ Google Sheets ของข้อมูล</li>
+                  <li>คลิกปุ่ม <b>แชร์ (Share)</b> ขวาบนสุด เลือกหน้าตั้งค่า และปรับเป็น <b>"ทุกคนที่มีลิงก์มีสิทธิ์อ่าน" (Anyone with the link can view)</b></li>
+                  <li>ไปที่แถบเมนูหลักของ Google Sheets คลิก <b>ไฟล์ (File)</b> &gt; <b>แชร์ (Share)</b> &gt; <b>เผยแพร่ไปยังเว็บ (Publish to web)</b></li>
+                  <li>เลือกแผ่นงานชี้คำตอบแบบฟอร์ม (Form Responses 1) แล้วระบุชนิดส่งออกเป็น <b>"ค่าที่คั่นด้วยจุลภาค (.csv)"</b> แล้วกดปุ่มเผยแพร่ <b>(Publish)</b></li>
+                  <li>แก้ไขคำสะกดหัวตารางคอลัมน์ในแถวแรกสุด (Row 1) ให้มีคำว่า <b className="text-purple-700">"ประทับเวลา"</b> (เก็บเวลาส่งฟอร์ม) <b className="text-purple-700">"อำเภอ"</b> (คัดกรองอำเภอ) และ <b className="text-purple-700">"เดือน"</b> (เพื่อส่งเดือนรายงาน) สะกดให้สมบูรณ์</li>
+                </ol>
+              </div>
+
+              <div className="flex gap-3 justify-end border-t border-slate-100 pt-4">
+                <button 
+                  onClick={() => loadData(true)}
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:shadow-lg hover:brightness-105 active:scale-95 transition-all text-sm"
+                >
+                  🔄 บังคับล้างแคช & ลองเชื่อมต่อใหม่อีกครั้ง
+                </button>
+              </div>
             </div>
           </div>
         ) : (

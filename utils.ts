@@ -113,44 +113,115 @@ export const getDistrictSummary = (record: ReportRecord): DistrictSummary => {
   };
 };
 
-async function fetchCSV(sheetId: string): Promise<string[][]> {
+if (typeof window !== 'undefined') {
+  (window as any).sheetDiagnostics = (window as any).sheetDiagnostics || {
+    JPTH: { status: 'pending', details: 'กำลังเตรียมเชื่อมต่อ...' },
+    CDDAI: { status: 'pending', details: 'กำลังเตรียมเชื่อมต่อ...' }
+  };
+}
+
+async function fetchCSV(sheetId: string, label: 'JPTH' | 'CDDAI'): Promise<string[][]> {
   const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&cache_bust=${Date.now()}`;
   
+  const diag = {
+    status: 'pending',
+    details: 'กำลังดาวน์โหลดไฟล์...',
+    proxyUsed: ''
+  };
+  
+  if (typeof window !== 'undefined') {
+    (window as any).sheetDiagnostics[label] = diag;
+  }
+  
+  // Try direct fetch first!
+  try {
+    console.log(`[${label}] Attempting direct fetch...`);
+    const resp = await fetch(url, { method: 'GET' });
+    if (resp.ok) {
+      const text = await resp.text();
+      if (text.trim().startsWith('<!DOCTYPE') || text.includes('<html')) {
+        diag.status = 'not_public_html';
+        diag.details = 'ได้รับหน้าเว็บเข้าสู่ระบบ (HTML) แทนที่จะเป็นไฟล์ตาราง (CSV)\nกรุณาตั้งค่าแชร์ไฟล์ Google Sheets ของคุณให้เป็น "ทุกคนที่มีลิงก์มีสิทธิ์อ่าน" หรือกด "เผยแพร่ไปยังเว็บ (Publish to web)" เป็นไฟล์ CSV';
+      } else if (text.length < 10) {
+        diag.status = 'empty_data';
+        diag.details = 'เนื้อหาไฟล์ว่างเปล่า (พบค่าน้อยกว่า 10 ตัวอักษร)';
+      } else {
+        const data = parseCSV(text);
+        if (data.length > 1) {
+          diag.status = 'success';
+          diag.details = 'เชื่อมต่อดึงข้อมูลโดยตรงสำเร็จแม่นยำ!';
+          diag.proxyUsed = 'Direct (ไม่ผ่าน Proxy)';
+          return data;
+        } else {
+          diag.status = 'empty_data';
+          diag.details = 'แปลงรหัส CSV แล้วไม่พบโครงสร้างข้อมูลแถวหลัก';
+        }
+      }
+    } else {
+      console.warn(`[${label}] Direct fetch returned status ${resp.status}`);
+    }
+  } catch (err: any) {
+    console.warn(`[${label}] Direct fetch failed (CORS or network error)`, err);
+  }
+
   // Try multiple proxies in order of reliability
   const proxies = [
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    `https://corsproxy.io/?${encodeURIComponent(url)}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
+    { name: 'AllOrigins', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
+    { name: 'CorsProxy.io', url: `https://corsproxy.io/?${encodeURIComponent(url)}` },
+    { name: 'CodeTabs', url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` }
   ];
 
-  for (const proxyUrl of proxies) {
+  for (const proxy of proxies) {
     try {
-      console.log(`Attempting to fetch from: ${proxyUrl}`);
-      const response = await fetch(proxyUrl, { 
+      console.log(`[${label}] Attempting proxy: ${proxy.name}`);
+      const response = await fetch(proxy.url, { 
         method: 'GET',
         headers: { 'Accept': 'text/csv' }
       });
       
-      if (!response.ok) continue;
+      if (!response.ok) {
+        diag.status = 'network_error';
+        diag.details = `ผู้ให้บริการ Proxy (${proxy.name}) รายงานสถานะล้มเหลว: ${response.status}`;
+        continue;
+      }
       
       const text = await response.text();
       
-      // Check if the response is actually HTML (usually happens when sheet is not public)
       if (text.trim().startsWith('<!DOCTYPE') || text.includes('<html')) {
-        console.error("Received HTML instead of CSV. Is the Google Sheet 'Published to the web'?");
+        diag.status = 'not_public_html';
+        diag.details = `ช่องทาง ${proxy.name} ได้รับหน้าเว็บ HTML แทนนั่นแสดงว่า Google Sheets ไม่ได้ตั้งค่าแชร์สาธารณะ\nกรุณาตั้งค่าแชร์ "ทุกคนที่มีลิงก์มีสิทธิ์อ่าน" หรือกด "เผยแพร่ไปยังเว็บ"`;
         continue;
       }
 
-      if (text.length < 10) continue; // Too short to be valid data
+      if (text.length < 10) {
+        diag.status = 'empty_data';
+        diag.details = `ช่องทาง ${proxy.name} ได้รับข้อมูลเปล่ากระชับสั้น`;
+         continue;
+      }
 
       const data = parseCSV(text);
-      if (data.length > 1) return data;
-    } catch (error) {
-      console.warn(`Proxy failed: ${proxyUrl}`, error);
+      if (data.length > 1) {
+        diag.status = 'success';
+        diag.details = `เชื่อมต่อและดึงข้อมูลสำเร็จผ่านระบบ Proxy ${proxy.name}!`;
+        diag.proxyUsed = proxy.name;
+        return data;
+      } else {
+        diag.status = 'empty_data';
+        diag.details = 'โครงสร้างข้อมูลแถวใน CSV ไม่สมบูรณ์';
+      }
+    } catch (error: any) {
+      console.warn(`Proxy failed: ${proxy.name}`, error);
+      diag.status = 'network_error';
+      diag.details = `การดึงข้อมูลผ่าน Proxy ${proxy.name} ล้มเหลว: ${error?.message || 'ข้อผิดพลาดเครือข่าย'}`;
     }
   }
 
-  console.error(`All proxies failed for sheet: ${sheetId}`);
+  if (diag.status === 'pending') {
+    diag.status = 'network_error';
+    diag.details = 'ไม่สามารถดึงข้อมูลได้สำเร็จ (เครือข่ายล้มเหลวหรือ Google Sheets เข้าถึงไม่ได้)';
+  }
+  
+  console.error(`[${label}] All fetch attempts failed for sheet: ${sheetId}`);
   return [];
 }
 
@@ -193,7 +264,17 @@ interface SheetEntry {
 }
 
 function processSheetData(rows: string[][], label: string): SheetEntry[] {
-  if (rows.length < 2) return [];
+  if (rows.length < 2) {
+    if (typeof window !== 'undefined') {
+      const key = label.includes('JPTH') ? 'JPTH' : 'CDDAI';
+      const diag = (window as any).sheetDiagnostics?.[key];
+      if (diag) {
+        diag.status = 'empty_data';
+        diag.details = `ตารางแผ่นงาน "${label}" ไม่มีข้อมูล (พบจำนวนแถวน้อยกว่า 2 แถว)`;
+      }
+    }
+    return [];
+  }
   
   // Use light normalization for header search to avoid stripping keywords like 'อำเภอ'
   const rawHeaders = rows[0].map(h => h.trim());
@@ -206,8 +287,22 @@ function processSheetData(rows: string[][], label: string): SheetEntry[] {
 
   if (timestampIdx === -1 || districtIdx === -1 || monthIdx === -1) {
     console.error(`Columns not found in ${label} sheet. Headers:`, rawHeaders);
+    if (typeof window !== 'undefined') {
+      const key = label.includes('JPTH') ? 'JPTH' : 'CDDAI';
+      const diag = (window as any).sheetDiagnostics?.[key];
+      if (diag) {
+        diag.status = 'headers_mismatch';
+        const missing = [];
+        if (timestampIdx === -1) missing.push("'ประทับเวลา/เวลา'");
+        if (districtIdx === -1) missing.push("'อำเภอ/อ./หน่วยงาน'");
+        if (monthIdx === -1) missing.push("'เดือน'");
+        
+        diag.details = `โครงสร้างตารางไม่ถูกต้อง: ตรวจหาคีย์หลักในหัวแถวแรกไม่ครบถ้วน\n\n- ขาดคอลัมน์: ${missing.join(', ')}\n\n- หัวแถวแรกที่ตรวจจับพบจริงจากไฟล์:\n[${rawHeaders.slice(0, 8).join(', ')}${rawHeaders.length > 8 ? '...' : ''}]\n\nคำแนะนำ: โปรดแก้ไขแถวแรกสุดของตารางใน Google Form/Sheets คอลัมน์ที่เกี่ยวข้องให้พิมพ์คีย์หลักเหล่านั้นให้ตรงจุด เช่น "ประทับเวลา", "อำเภอ", "เดือน"`;
+      }
+    }
     return [];
   }
+
 
   const entries: SheetEntry[] = [];
   for (let i = 1; i < rows.length; i++) {
@@ -260,8 +355,8 @@ export const fetchData = async (forceRefresh = false): Promise<ReportRecord[]> =
 
   console.log('Fetching fresh data from Google Sheets...');
   const [jpthRaw, issueRaw] = await Promise.all([
-    fetchCSV(JPTH_SHEET_ID),
-    fetchCSV(ISSUE_SHEET_ID)
+    fetchCSV(JPTH_SHEET_ID, 'JPTH'),
+    fetchCSV(ISSUE_SHEET_ID, 'CDDAI')
   ]);
 
   const jpthEntries = processSheetData(jpthRaw, 'JPTH');
